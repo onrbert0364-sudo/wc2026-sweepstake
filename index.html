@@ -21,7 +21,6 @@
     --yellow-card: #f5c518;
     --red-card:    #e03131;
     --goals-col:   #2196F3;
-    --row-alt:     #0f3d22;
     --font-display:'Bebas Neue', sans-serif;
     --font-body:   'Inter', sans-serif;
     --font-mono:   'JetBrains Mono', monospace;
@@ -186,8 +185,8 @@
     transition: background 0.15s;
   }
 
-  .lb-table tbody tr:hover          { background: rgba(255,255,255,0.04); }
-  .lb-table tbody tr:nth-child(even){ background: rgba(255,255,255,0.02); }
+  .lb-table tbody tr:hover           { background: rgba(255,255,255,0.04); }
+  .lb-table tbody tr:nth-child(even) { background: rgba(255,255,255,0.02); }
 
   .lb-table tbody td { padding: 10px 12px; font-size: 13px; vertical-align: middle; }
 
@@ -206,9 +205,9 @@
     font-weight: 600;
   }
 
-  .rank-1 .rank-badge { background: var(--gold);   color: #071f0f; }
-  .rank-2 .rank-badge { background: var(--silver);  color: #1a1a1a; }
-  .rank-3 .rank-badge { background: var(--bronze);  color: #fff; }
+  .rank-1 .rank-badge     { background: var(--gold);   color: #071f0f; }
+  .rank-2 .rank-badge     { background: var(--silver);  color: #1a1a1a; }
+  .rank-3 .rank-badge     { background: var(--bronze);  color: #fff; }
   .rank-other .rank-badge { background: rgba(255,255,255,0.08); color: var(--text-muted); }
 
   .team-name    { font-weight: 600; font-size: 13px; }
@@ -366,10 +365,11 @@
 </footer>
 
 <script>
-const API_KEY   = 'c73af5b01c478008722d1c8aed939545';
-const API_BASE  = 'https://v3.football.api-sports.io';
-const LEAGUE_ID = 1;
-const SEASON    = 2026;
+// All API calls go through our Cloudflare Worker which handles
+// the auth header and CORS — no browser restrictions
+const WORKER_URL = 'https://wc2026-proxy.0364bert.workers.dev';
+const LEAGUE_ID  = 1;
+const SEASON     = 2026;
 
 const PARTICIPANTS = [
   { manager:'John R',     team:'Sweden' },
@@ -429,6 +429,7 @@ const ALIASES = {
   "cote d'ivoire":                'Ivory Coast',
   'dr congo':                     'DR Congo',
   'democratic republic of congo': 'DR Congo',
+  'congo dr':                     'DR Congo',
   'bosnia':                       'Bosnia and Herzegovina',
   'czechia':                      'Czech Republic',
   'curacao':                      'Curacao',
@@ -441,61 +442,36 @@ function matchTeam(apiName) {
   if (!apiName) return null;
   const lower = apiName.toLowerCase().trim();
   if (ALIASES[lower]) return ALIASES[lower];
-  for (const p of PARTICIPANTS) {
-    const t = p.team.toLowerCase().trim();
-    if (t === lower) return p.team;
-    if (lower.includes(t) || t.includes(lower)) return p.team;
+  for (var i = 0; i < PARTICIPANTS.length; i++) {
+    var t = PARTICIPANTS[i].team.toLowerCase().trim();
+    if (t === lower) return PARTICIPANTS[i].team;
+    if (lower.includes(t) || t.includes(lower)) return PARTICIPANTS[i].team;
   }
   return null;
 }
 
 function setStatus(msg, type) {
   document.getElementById('status-text').textContent = msg;
-  const dot = document.getElementById('status-dot');
+  var dot = document.getElementById('status-dot');
   dot.className = 'status-dot' + (type === 'live' ? ' live' : type === 'error' ? ' error' : '');
 }
 
 async function apiFetch(endpoint) {
-  const targetUrl = API_BASE + endpoint;
-
-  // Try direct fetch first
-  try {
-    const res = await fetch(targetUrl, {
-      headers: { 'x-auth-token': API_KEY }
-    });
-    if (res.ok) {
-      const data = await res.json();
-      if (data.errors && Object.keys(data.errors).length === 0) return data;
-      if (data.response && data.response.length >= 0) return data;
-    }
-  } catch(e) { /* CORS blocked, try proxy */ }
-
-  // corsproxy.io proxy
-  try {
-    const proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent(targetUrl);
-    const res = await fetch(proxyUrl, {
-      headers: { 'x-auth-token': API_KEY }
-    });
-    if (res.ok) return await res.json();
-  } catch(e) { /* try next proxy */ }
-
-  // allorigins fallback
-  const proxyUrl2 = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(targetUrl);
-  const res2 = await fetch(proxyUrl2, {
-    headers: { 'x-auth-token': API_KEY }
-  });
-  if (!res2.ok) throw new Error('HTTP ' + res2.status);
-  return await res2.json();
+  var url = WORKER_URL + '?endpoint=' + encodeURIComponent(endpoint);
+  var res = await fetch(url);
+  if (!res.ok) throw new Error('Worker returned HTTP ' + res.status);
+  return await res.json();
 }
 
 async function fetchAllData() {
-  const btn = document.getElementById('refresh-btn');
+  var btn = document.getElementById('refresh-btn');
   btn.disabled = true;
   btn.textContent = 'LOADING...';
-  setStatus('Connecting to api-sports.io...', 'live');
+  setStatus('Connecting via Cloudflare Worker...', 'live');
 
   teamStats = {};
-  for (const p of PARTICIPANTS) {
+  for (var i = 0; i < PARTICIPANTS.length; i++) {
+    var p = PARTICIPANTS[i];
     if (!teamStats[p.team]) {
       teamStats[p.team] = {
         manager: p.manager,
@@ -508,26 +484,27 @@ async function fetchAllData() {
 
   try {
     setStatus('Fetching fixtures...', 'live');
-    const fixtData = await apiFetch('/fixtures?league=' + LEAGUE_ID + '&season=' + SEASON);
+    var fixtData = await apiFetch('/fixtures?league=' + LEAGUE_ID + '&season=' + SEASON);
 
     if (!fixtData.response || fixtData.response.length === 0) {
-      setStatus('No fixture data returned — API key may need activation', 'error');
+      setStatus('No fixture data returned — API key may still be activating', 'error');
       btn.disabled = false;
       btn.textContent = 'REFRESH DATA';
       return;
     }
 
-    const finishedIDs = [];
+    var finishedIDs = [];
 
-    for (const f of fixtData.response) {
-      const homeAPI  = f.teams && f.teams.home ? f.teams.home.name : null;
-      const awayAPI  = f.teams && f.teams.away ? f.teams.away.name : null;
-      const homeGoals = (f.goals && f.goals.home != null) ? f.goals.home : 0;
-      const awayGoals = (f.goals && f.goals.away != null) ? f.goals.away : 0;
-      const status   = f.fixture && f.fixture.status ? f.fixture.status.short : '';
+    for (var f = 0; f < fixtData.response.length; f++) {
+      var fix = fixtData.response[f];
+      var homeAPI   = fix.teams && fix.teams.home ? fix.teams.home.name : null;
+      var awayAPI   = fix.teams && fix.teams.away ? fix.teams.away.name : null;
+      var homeGoals = fix.goals && fix.goals.home != null ? fix.goals.home : 0;
+      var awayGoals = fix.goals && fix.goals.away != null ? fix.goals.away : 0;
+      var status    = fix.fixture && fix.fixture.status ? fix.fixture.status.short : '';
 
-      const homeTeam = matchTeam(homeAPI);
-      const awayTeam = matchTeam(awayAPI);
+      var homeTeam = matchTeam(homeAPI);
+      var awayTeam = matchTeam(awayAPI);
 
       if (homeTeam && teamStats[homeTeam] !== undefined) {
         teamStats[homeTeam].goalsConceded += awayGoals;
@@ -537,21 +514,22 @@ async function fetchAllData() {
       }
 
       if (['FT','AET','PEN','1H','HT','2H'].indexOf(status) >= 0) {
-        finishedIDs.push(f.fixture.id);
+        finishedIDs.push(fix.fixture.id);
       }
     }
 
     // Fetch cards in batches of 20
-    for (let i = 0; i < finishedIDs.length; i += 20) {
-      const batch = finishedIDs.slice(i, i + 20);
-      setStatus('Fetching cards: ' + (i+1) + ' to ' + Math.min(i+20, finishedIDs.length) + ' of ' + finishedIDs.length + ' fixtures...', 'live');
+    for (var b = 0; b < finishedIDs.length; b += 20) {
+      var batch = finishedIDs.slice(b, b + 20);
+      setStatus('Fetching cards: fixtures ' + (b+1) + ' to ' + Math.min(b+20, finishedIDs.length) + ' of ' + finishedIDs.length + '...', 'live');
 
-      const evData = await apiFetch('/fixtures/events?fixture=' + batch.join('-'));
+      var evData = await apiFetch('/fixtures/events?fixture=' + batch.join('-'));
 
       if (evData.response) {
-        for (const ev of evData.response) {
+        for (var e = 0; e < evData.response.length; e++) {
+          var ev = evData.response[e];
           if (ev.type !== 'Card') continue;
-          const teamName = matchTeam(ev.team ? ev.team.name : null);
+          var teamName = matchTeam(ev.team ? ev.team.name : null);
           if (!teamName || teamStats[teamName] === undefined) continue;
 
           if (ev.detail === 'Yellow Card') {
@@ -562,16 +540,16 @@ async function fetchAllData() {
         }
       }
 
-      if (i + 20 < finishedIDs.length) {
+      if (b + 20 < finishedIDs.length) {
         await new Promise(function(r){ setTimeout(r, 1200); });
       }
     }
 
     renderLeaderboards();
 
-    const now = new Date();
-    const ts = now.toLocaleDateString('en-GB', {day:'2-digit',month:'short',year:'numeric'}) +
-               ' ' + now.toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit'});
+    var now = new Date();
+    var ts = now.toLocaleDateString('en-GB', {day:'2-digit',month:'short',year:'numeric'}) +
+             ' ' + now.toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit'});
     document.getElementById('last-updated').textContent = 'Last updated: ' + ts;
     setStatus('Updated ' + ts + ' — ' + finishedIDs.length + ' completed fixtures processed', 'live');
 
@@ -585,7 +563,7 @@ async function fetchAllData() {
 }
 
 function renderLeaderboards() {
-  const teams = Object.keys(teamStats).map(function(team) {
+  var teams = Object.keys(teamStats).map(function(team) {
     return {
       team: team,
       manager: teamStats[team].manager,
@@ -607,10 +585,11 @@ function renderLeaderboards() {
 }
 
 function renderTable(tbodyId, sorted, statKey) {
-  const tbody = document.getElementById(tbodyId);
+  var tbody = document.getElementById(tbodyId);
   tbody.innerHTML = '';
-  sorted.forEach(function(row, idx) {
-    var rank = idx + 1;
+  for (var i = 0; i < sorted.length; i++) {
+    var row = sorted[i];
+    var rank = i + 1;
     var rankClass = rank <= 3 ? 'rank-' + rank : 'rank-other';
     var val = row[statKey];
     var zeroClass = val === 0 ? ' zero' : '';
@@ -618,10 +597,11 @@ function renderTable(tbodyId, sorted, statKey) {
     tr.className = rankClass;
     tr.innerHTML =
       '<td style="text-align:center"><span class="rank-badge">' + rank + '</span></td>' +
-      '<td><div class="team-name">' + row.team + '</div><div class="manager-name">' + row.manager + '</div></td>' +
+      '<td><div class="team-name">' + row.team + '</div>' +
+      '<div class="manager-name">' + row.manager + '</div></td>' +
       '<td class="stat-value' + zeroClass + '">' + val + '</td>';
     tbody.appendChild(tr);
-  });
+  }
 }
 
 document.getElementById('auto-refresh-toggle').addEventListener('change', function() {
