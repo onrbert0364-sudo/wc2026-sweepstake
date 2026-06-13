@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MOD · WC 2026 Sweepstake</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
+
+  :root {
+    --pitch:       #0a3d1f;
+    --pitch-mid:   #0f5c2e;
+    --pitch-light: #1a7a40;
+    --gold:        #f5c518;
+    --silver:      #b8b8b8;
+    --bronze:      #cd7f32;
+    --card-bg:     #0d2b18;
+    --card-border: #1e4d2b;
+    --text-primary:#f0f7f2;
+    --text-muted:  #7ab88a;
+    --yellow-card: #f5c518;
+    --red-card:    #e03131;
+    --goals-col:   #2196F3;
+    --row-alt:     #0f3d22;
+    --font-display:'Bebas Neue', sans-serif;
+    --font-body:   'Inter', sans-serif;
+    --font-mono:   'JetBrains Mono', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--pitch);
+    color: var(--text-primary);
+    font-family: var(--font-body);
+    min-height: 100vh;
+    background-image:
+      repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 60px,
+        rgba(255,255,255,0.015) 60px,
+        rgba(255,255,255,0.015) 120px
+      );
+  }
+
+  /* ── HEADER ── */
+  header {
+    background: linear-gradient(135deg, #071f0f 0%, #0d3520 50%, #071f0f 100%);
+    border-bottom: 2px solid var(--gold);
+    padding: 24px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+
+  .header-left h1 {
+    font-family: var(--font-display);
+    font-size: clamp(28px, 5vw, 52px);
+    letter-spacing: 3px;
+    color: var(--gold);
+    line-height: 1;
+  }
+
+  .header-left p {
+    font-size: 12px;
+    color: var(--text-muted);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-top: 4px;
+  }
+
+  .header-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 8px;
+  }
+
+  #last-updated {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+
+  #refresh-btn {
+    background: var(--gold);
+    color: #071f0f;
+    border: none;
+    padding: 10px 24px;
+    font-family: var(--font-display);
+    font-size: 18px;
+    letter-spacing: 2px;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.2s;
+  }
+
+  #refresh-btn:hover { background: #ffd740; transform: translateY(-1px); }
+  #refresh-btn:disabled { opacity: 0.5; cursor: wait; }
+
+  /* ── STATUS BAR ── */
+  #status-bar {
+    background: #071f0f;
+    border-bottom: 1px solid var(--card-border);
+    padding: 8px 32px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    min-height: 32px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .status-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--text-muted);
+    flex-shrink: 0;
+  }
+  .status-dot.live { background: #4caf50; animation: pulse 1.5s infinite; }
+  .status-dot.error { background: var(--red-card); }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  /* ── MAIN GRID ── */
+  main {
+    padding: 24px 32px;
+    max-width: 1600px;
+    margin: 0 auto;
+  }
+
+  .leaderboards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+    gap: 24px;
+  }
+
+  /* ── LEADERBOARD CARD ── */
+  .lb-card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .lb-header {
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .lb-header.goals  { background: linear-gradient(90deg, #0d3a7a, #0a2855); border-bottom: 2px solid var(--goals-col); }
+  .lb-header.yellow { background: linear-gradient(90deg, #4a3500, #2e2100); border-bottom: 2px solid var(--yellow-card); }
+  .lb-header.red    { background: linear-gradient(90deg, #4a0d0d, #2e0808); border-bottom: 2px solid var(--red-card); }
+
+  .lb-icon { font-size: 28px; line-height: 1; }
+
+  .lb-title {
+    font-family: var(--font-display);
+    font-size: 22px;
+    letter-spacing: 2px;
+    flex: 1;
+  }
+
+  .lb-header.goals  .lb-title { color: #90caf9; }
+  .lb-header.yellow .lb-title { color: var(--yellow-card); }
+  .lb-header.red    .lb-title { color: #ef9a9a; }
+
+  .lb-subtitle {
+    font-size: 10px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  /* ── TABLE ── */
+  .lb-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .lb-table thead th {
+    padding: 8px 12px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--text-muted);
+    text-align: left;
+    background: rgba(0,0,0,0.2);
+    border-bottom: 1px solid var(--card-border);
+    font-weight: 600;
+  }
+
+  .lb-table thead th.num { text-align: center; }
+
+  .lb-table tbody tr {
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    transition: background 0.15s;
+  }
+
+  .lb-table tbody tr:hover { background: rgba(255,255,255,0.04); }
+  .lb-table tbody tr:nth-child(even) { background: rgba(255,255,255,0.02); }
+  .lb-table tbody tr:nth-child(even):hover { background: rgba(255,255,255,0.05); }
+
+  .lb-table tbody td {
+    padding: 10px 12px;
+    font-size: 13px;
+    vertical-align: middle;
+  }
+
+  /* Medal rows */
+  .rank-1 { background: linear-gradient(90deg, rgba(245,197,24,0.15), transparent) !important; }
+  .rank-2 { background: linear-gradient(90deg, rgba(184,184,184,0.12), transparent) !important; }
+  .rank-3 { background: linear-gradient(90deg, rgba(205,127,50,0.12), transparent) !important; }
+
+  .rank-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .rank-1 .rank-badge { background: var(--gold); color: #071f0f; }
+  .rank-2 .rank-badge { background: var(--silver); color: #1a1a1a; }
+  .rank-3 .rank-badge { background: var(--bronze); color: #fff; }
+  .rank-other .rank-badge { background: rgba(255,255,255,0.08); color: var(--text-muted); }
+
+  .team-name {
+    font-weight: 600;
+    font-size: 13px;
+  }
+
+  .manager-name {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 1px;
+  }
+
+  .stat-value {
+    font-family: var(--font-mono);
+    font-size: 20px;
+    font-weight: 600;
+    text-align: center;
+  }
+
+  .goals  .stat-value { color: #90caf9; }
+  .yellow .stat-value { color: var(--yellow-card); }
+  .red    .stat-value { color: #ef9a9a; }
+
+  .zero { opacity: 0.3; }
+
+  /* ── LOADING ── */
+  .loading-row td {
+    text-align: center;
+    padding: 40px;
+    color: var(--text-muted);
+    font-size: 13px;
+  }
+
+  .spinner {
+    display: inline-block;
+    width: 20px; height: 20px;
+    border: 2px solid var(--card-border);
+    border-top-color: var(--gold);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    vertical-align: middle;
+    margin-right: 8px;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── FOOTER ── */
+  footer {
+    text-align: center;
+    padding: 24px 32px;
+    font-size: 11px;
+    color: var(--text-muted);
+    border-top: 1px solid var(--card-border);
+    margin-top: 32px;
+    letter-spacing: 1px;
+  }
+
+  /* ── AUTO REFRESH TOGGLE ── */
+  .auto-refresh {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+
+  .toggle {
+    position: relative;
+    width: 36px; height: 20px;
+  }
+
+  .toggle input { opacity: 0; width: 0; height: 0; }
+
+  .toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    inset: 0;
+    background: var(--card-border);
+    border-radius: 20px;
+    transition: 0.3s;
+  }
+
+  .toggle-slider:before {
+    content: '';
+    position: absolute;
+    width: 14px; height: 14px;
+    left: 3px; top: 3px;
+    background: white;
+    border-radius: 50%;
+    transition: 0.3s;
+  }
+
+  .toggle input:checked + .toggle-slider { background: var(--pitch-light); }
+  .toggle input:checked + .toggle-slider:before { transform: translateX(16px); }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 500px) {
+    header { padding: 16px; }
+    main { padding: 16px; }
+    .leaderboards { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <h1>⚽ MOD WC 2026 SWEEPSTAKE</h1>
+    <p>Marine Offshore Designers &nbsp;·&nbsp; Group Stage Tracker</p>
+  </div>
+  <div class="header-right">
+    <div id="last-updated">Not yet refreshed</div>
+    <div class="auto-refresh">
+      <label class="toggle">
+        <input type="checkbox" id="auto-refresh-toggle">
+        <span class="toggle-slider"></span>
+      </label>
+      <span>Auto-refresh (30 min)</span>
+    </div>
+    <button id="refresh-btn" onclick="fetchAllData()">↻ REFRESH DATA</button>
+  </div>
+</header>
+
+<div id="status-bar">
+  <div class="status-dot" id="status-dot"></div>
+  <span id="status-text">Ready — click Refresh to load latest data</span>
+</div>
+
+<main>
+  <div class="leaderboards">
+
+    <!-- Goals Conceded -->
+    <div class="lb-card">
+      <div class="lb-header goals">
+        <div class="lb-icon">🥅</div>
+        <div>
+          <div class="lb-title">GOALS CONCEDED</div>
+          <div class="lb-subtitle">Group Stage · Own goals included</div>
+        </div>
+      </div>
+      <table class="lb-table goals">
+        <thead>
+          <tr>
+            <th class="num" style="width:48px">Rank</th>
+            <th>Team / Manager</th>
+            <th class="num" style="width:64px">Goals</th>
+          </tr>
+        </thead>
+        <tbody id="goals-tbody">
+          <tr class="loading-row"><td colspan="3"><span class="spinner"></span>Awaiting refresh...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Yellow Cards -->
+    <div class="lb-card">
+      <div class="lb-header yellow">
+        <div class="lb-icon">🟨</div>
+        <div>
+          <div class="lb-title">YELLOW CARDS</div>
+          <div class="lb-subtitle">Group Stage · All matches</div>
+        </div>
+      </div>
+      <table class="lb-table yellow">
+        <thead>
+          <tr>
+            <th class="num" style="width:48px">Rank</th>
+            <th>Team / Manager</th>
+            <th class="num" style="width:64px">Cards</th>
+          </tr>
+        </thead>
+        <tbody id="yellow-tbody">
+          <tr class="loading-row"><td colspan="3"><span class="spinner"></span>Awaiting refresh...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Red Cards -->
+    <div class="lb-card">
+      <div class="lb-header red">
+        <div class="lb-icon">🟥</div>
+        <div>
+          <div class="lb-title">RED CARDS</div>
+          <div class="lb-subtitle">Group Stage · Includes second yellows</div>
+        </div>
+      </div>
+      <table class="lb-table red">
+        <thead>
+          <tr>
+            <th class="num" style="width:48px">Rank</th>
+            <th>Team / Manager</th>
+            <th class="num" style="width:64px">Cards</th>
+          </tr>
+        </thead>
+        <tbody id="red-tbody">
+          <tr class="loading-row"><td colspan="3"><span class="spinner"></span>Awaiting refresh...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+</main>
+
+<footer>
+  MOD World Cup 2026 Sweepstake Tracker &nbsp;·&nbsp; Group Stage Only &nbsp;·&nbsp; Data: api-sports.io &nbsp;·&nbsp; 100 requests/day limit
+</footer>
+
+<script>
+// ── CONFIG ────────────────────────────────────────────────────
+const API_KEY    = 'c73af5b01c478008722d1c8aed939545';
+const API_BASE   = 'https://v3.football.api-sports.io';
+const LEAGUE_ID  = 1;
+const SEASON     = 2026;
+const PROXY      = 'https://api.allorigins.win/raw?url=';
+
+// ── SWEEPSTAKE DATA ───────────────────────────────────────────
+const PARTICIPANTS = [
+  { manager: 'John R',     team: 'Sweden' },
+  { manager: 'Owen',       team: 'Curaçao' },
+  { manager: 'Verity',     team: 'Algeria' },
+  { manager: 'Will',       team: 'Bosnia and Herzegovina' },
+  { manager: 'Liz',        team: 'Panama' },
+  { manager: 'Conor',      team: 'Australia' },
+  { manager: 'Fraser',     team: 'Qatar' },
+  { manager: 'Adam',       team: 'DR Congo' },
+  { manager: 'Neal',       team: 'Uruguay' },
+  { manager: 'Tom V',      team: 'Scotland' },
+  { manager: 'Phil',       team: 'Tunisia' },
+  { manager: 'Phil',       team: 'Morocco' },
+  { manager: 'Phil',       team: 'Switzerland' },
+  { manager: 'Phil',       team: 'Saudi Arabia' },
+  { manager: 'Phil',       team: 'Paraguay' },
+  { manager: 'Bert',       team: 'Jordan' },
+  { manager: 'Mikey',      team: 'Argentina' },
+  { manager: 'Connor A',   team: 'Norway' },
+  { manager: 'Lizzie',     team: 'England' },
+  { manager: 'Longy',      team: 'Senegal' },
+  { manager: 'Kenny',      team: 'Japan' },
+  { manager: 'Ryan',       team: 'Croatia' },
+  { manager: 'Stewart',    team: 'Netherlands' },
+  { manager: 'Nathan',     team: 'Uzbekistan' },
+  { manager: 'Nathan',     team: 'Brazil' },
+  { manager: 'Tom V',      team: 'New Zealand' },
+  { manager: 'Owen',       team: 'Spain' },
+  { manager: 'Will',       team: 'Iran' },
+  { manager: 'Fraser',     team: 'Portugal' },
+  { manager: 'Fraser',     team: 'Egypt' },
+  { manager: 'Fraser',     team: 'France' },
+  { manager: 'Mike G',     team: 'Ghana' },
+  { manager: 'Mike G',     team: 'Belgium' },
+  { manager: 'James',      team: 'Cape Verde' },
+  { manager: 'Liz',        team: 'Ivory Coast' },
+  { manager: 'John R',     team: 'Turkey' },
+  { manager: 'Lauren R',   team: 'Canada' },
+  { manager: 'Bert',       team: 'Germany' },
+  { manager: 'Adam',       team: 'Mexico' },
+  { manager: 'Conor L',    team: 'Czech Republic' },
+  { manager: 'Chris L',    team: 'Iran' },
+  { manager: 'Liz',        team: 'Haiti' },
+  { manager: 'Mikey',      team: 'Austria' },
+  { manager: 'Alin',       team: 'Ecuador' },
+  { manager: 'James',      team: 'South Africa' },
+  { manager: 'Hugh',       team: 'Colombia' },
+  { manager: 'Tom V H',    team: 'South Korea' },
+  { manager: 'Tom V Jake', team: 'United States' },
+];
+
+// ── STATE ─────────────────────────────────────────────────────
+let autoRefreshTimer = null;
+let teamStats = {};
+
+// ── FUZZY TEAM MATCH ──────────────────────────────────────────
+function matchTeam(apiName) {
+  const lower = apiName.toLowerCase().trim();
+  for (const p of PARTICIPANTS) {
+    const t = p.team.toLowerCase().trim();
+    if (t === lower) return p.team;
+    if (lower.includes(t) || t.includes(lower)) return p.team;
+  }
+  // Common API name variants
+  const aliases = {
+    'korea republic':         'South Korea',
+    'republic of ireland':    'Ireland',
+    'usa':                    'United States',
+    'united states':          'United States',
+    'ivory coast':            'Ivory Coast',
+    "cote d'ivoire":          'Ivory Coast',
+    'dr congo':               'DR Congo',
+    'democratic republic of congo': 'DR Congo',
+    'bosnia':                 'Bosnia and Herzegovina',
+    'cape verde':             'Cape Verde',
+    'czechia':                'Czech Republic',
+    'curacao':                'Curaçao',
+  };
+  if (aliases[lower]) return aliases[lower];
+  return null;
+}
+
+// ── FETCH WITH PROXY (CORS bypass) ───────────────────────────
+async function apiFetch(endpoint) {
+  const url = `${API_BASE}${endpoint}`;
+  // Try direct first (works if CORS allows), fall back to proxy
+  try {
+    const res = await fetch(url, {
+      headers: { 'x-auth-token': API_KEY }
+    });
+    if (res.ok) return await res.json();
+  } catch(e) { /* CORS blocked, try proxy */ }
+
+  // Proxy approach
+  const proxyUrl = PROXY + encodeURIComponent(url);
+  const res = await fetch(proxyUrl, {
+    headers: { 'x-auth-token': API_KEY }
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return await res.json();
+}
+
+// ── SET STATUS ────────────────────────────────────────────────
+function setStatus(msg, type = 'idle') {
+  document.getElementById('status-text').textContent = msg;
+  const dot = document.getElementById('status-dot');
+  dot.className = 'status-dot' + (type === 'live' ? ' live' : type === 'error' ? ' error' : '');
+}
+
+// ── MAIN FETCH ────────────────────────────────────────────────
+async function fetchAllData() {
+  const btn = document.getElementById('refresh-btn');
+  btn.disabled = true;
+  btn.textContent = '↻ LOADING...';
+  setStatus('Fetching fixtures from api-sports.io...', 'live');
+
+  // Reset stats
+  teamStats = {};
+  for (const p of PARTICIPANTS) {
+    if (!teamStats[p.team]) {
+      teamStats[p.team] = { manager: p.manager, goalsConceded: 0, yellowCards: 0, redCards: 0 };
+    }
+  }
+
+  try {
+    // ── Step 1: Fixtures (goals) ───────────────────────────
+    setStatus('Fetching group stage fixtures...', 'live');
+    const fixtData = await apiFetch(`/fixtures?league=${LEAGUE_ID}&season=${SEASON}`);
+
+    if (!fixtData.response || fixtData.response.length === 0) {
+      setStatus('No fixture data returned — check API key in source', 'error');
+      btn.disabled = false;
+      btn.textContent = '↻ REFRESH DATA';
+      return;
+    }
+
+    const finishedIDs = [];
+
+    for (const f of fixtData.response) {
+      const homeAPI = f.teams?.home?.name;
+      const awayAPI = f.teams?.away?.name;
+      const homeGoals = f.goals?.home ?? 0;
+      const awayGoals = f.goals?.away ?? 0;
+      const status   = f.fixture?.status?.short;
+
+      const homeTeam = matchTeam(homeAPI);
+      const awayTeam = matchTeam(awayAPI);
+
+      if (homeTeam && teamStats[homeTeam] !== undefined) {
+        teamStats[homeTeam].goalsConceded += (awayGoals || 0);
+      }
+      if (awayTeam && teamStats[awayTeam] !== undefined) {
+        teamStats[awayTeam].goalsConceded += (homeGoals || 0);
+      }
+
+      if (['FT','AET','PEN','1H','HT','2H'].includes(status)) {
+        finishedIDs.push(f.fixture.id);
+      }
+    }
+
+    // ── Step 2: Events (cards) ─────────────────────────────
+    // Batch up to 20 fixture IDs per call using ids= parameter
+    // Saves requests vs one-per-fixture
+    const batchSize = 20;
+    let processed = 0;
+
+    for (let i = 0; i < finishedIDs.length; i += batchSize) {
+      const batch = finishedIDs.slice(i, i + batchSize);
+      setStatus(`Fetching cards: fixtures ${i+1}–${Math.min(i+batchSize, finishedIDs.length)} of ${finishedIDs.length}...`, 'live');
+
+      const evData = await apiFetch(`/fixtures/events?fixture=${batch.join('-')}`);
+
+      if (evData.response) {
+        for (const ev of evData.response) {
+          if (ev.type !== 'Card') continue;
+          const teamName = matchTeam(ev.team?.name);
+          if (!teamName || !teamStats[teamName]) continue;
+
+          if (ev.detail === 'Yellow Card') {
+            teamStats[teamName].yellowCards++;
+          } else if (ev.detail === 'Red Card' || ev.detail === 'Second Yellow card') {
+            teamStats[teamName].redCards++;
+          }
+        }
+      }
+
+      processed += batch.length;
+      // Small delay to respect rate limits
+      if (i + batchSize < finishedIDs.length) {
+        await new Promise(r => setTimeout(r, 1200));
+      }
+    }
+
+    // ── Step 3: Render ─────────────────────────────────────
+    renderLeaderboards();
+
+    const now = new Date();
+    const ts = now.toLocaleDateString('en-GB', {day:'2-digit',month:'short',year:'numeric'}) +
+               ' ' + now.toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit'});
+    document.getElementById('last-updated').textContent = 'Last updated: ' + ts;
+    setStatus(`Updated ${ts} · ${finishedIDs.length} completed fixtures processed`, 'live');
+
+  } catch(err) {
+    setStatus('Error: ' + err.message + ' — check API key or try again', 'error');
+    console.error(err);
+  }
+
+  btn.disabled = false;
+  btn.textContent = '↻ REFRESH DATA';
+}
+
+// ── RENDER LEADERBOARDS ───────────────────────────────────────
+function renderLeaderboards() {
+  const teams = Object.entries(teamStats).map(([team, s]) => ({
+    team, manager: s.manager,
+    goalsConceded: s.goalsConceded,
+    yellowCards:   s.yellowCards,
+    redCards:      s.redCards,
+  }));
+
+  renderTable('goals-tbody',  [...teams].sort((a,b) => b.goalsConceded - a.goalsConceded), 'goalsConceded', 'goals');
+  renderTable('yellow-tbody', [...teams].sort((a,b) => b.yellowCards   - a.yellowCards),   'yellowCards',   'yellow');
+  renderTable('red-tbody',    [...teams].sort((a,b) => b.redCards      - a.redCards),       'redCards',      'red');
+}
+
+function renderTable(tbodyId, sorted, statKey, type) {
+  const tbody = document.getElementById(tbodyId);
+  tbody.innerHTML = '';
+
+  sorted.forEach((row, idx) => {
+    const rank = idx + 1;
+    const rankClass = rank <= 3 ? `rank-${rank}` : 'rank-other';
+    const val = row[statKey];
+    const zeroClass = val === 0 ? ' zero' : '';
+
+    const tr = document.createElement('tr');
+    tr.className = rankClass;
+    tr.innerHTML = `
+      <td style="text-align:center">
+        <span class="rank-badge">${rank}</span>
+      </td>
+      <td>
+        <div class="team-name">${row.team}</div>
+        <div class="manager-name">${row.manager}</div>
+      </td>
+      <td class="stat-value${zeroClass}">${val}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+// ── AUTO REFRESH ──────────────────────────────────────────────
+document.getElementById('auto-refresh-toggle').addEventListener('change', function() {
+  if (this.checked) {
+    autoRefreshTimer = setInterval(fetchAllData, 30 * 60 * 1000);
+    setStatus('Auto-refresh enabled — updates every 30 minutes', 'live');
+  } else {
+    clearInterval(autoRefreshTimer);
+    setStatus('Auto-refresh disabled');
+  }
+});
+
+// ── INIT ──────────────────────────────────────────────────────
+// Auto-load on open
+fetchAllData();
+</script>
+</body>
+</html>
