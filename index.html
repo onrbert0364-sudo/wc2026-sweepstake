@@ -411,15 +411,29 @@ var ALIASES = {
   'korea republic':               'South Korea',
   'republic of korea':            'South Korea',
   'usa':                          'United States',
-  "cote d'ivoire":                'Ivory Coast',
+  'cote divoire':                 'Ivory Coast',
   'dr congo':                     'DR Congo',
   'democratic republic of congo': 'DR Congo',
   'congo dr':                     'DR Congo',
-  'bosnia':                       'Bosnia and Herzegovina',
   'czechia':                      'Czech Republic',
-  'curacao':                      'Curacao',
-  'iraq':                         'Iraq',
 };
+
+// Normalizes a team name for robust comparison:
+// - lowercases
+// - strips accents/diacritics (e.g. Curaçao -> curacao)
+// - converts '&' and '-' to 'and' (e.g. Bosnia & Herzegovina / Bosnia-Herzegovina -> bosnia and herzegovina)
+// - strips remaining punctuation (apostrophes etc.)
+// - collapses whitespace
+function normalize(str) {
+  if (!str) return '';
+  return str
+    .toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[&\-]/g, ' and ')
+    .replace(/[^a-z0-9 ]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
 
 var teamStats = {};
 var cardData  = {};
@@ -435,12 +449,12 @@ window.addEventListener('load', function() {
 
 function matchTeam(apiName) {
   if (!apiName) return null;
-  var lower = apiName.toLowerCase().trim();
-  if (ALIASES[lower]) return ALIASES[lower];
+  var normApi = normalize(apiName);
+  if (ALIASES[normApi]) return ALIASES[normApi];
   for (var i = 0; i < PARTICIPANTS.length; i++) {
-    var t = PARTICIPANTS[i].team.toLowerCase().trim();
-    if (t === lower) return PARTICIPANTS[i].team;
-    if (lower.includes(t) || t.includes(lower)) return PARTICIPANTS[i].team;
+    var normTeam = normalize(PARTICIPANTS[i].team);
+    if (normTeam === normApi) return PARTICIPANTS[i].team;
+    if (normApi.includes(normTeam) || normTeam.includes(normApi)) return PARTICIPANTS[i].team;
   }
   return null;
 }
